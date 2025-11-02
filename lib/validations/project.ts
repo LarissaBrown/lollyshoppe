@@ -45,3 +45,19 @@ export const deliverableSchema = z.object({
 
 export type DeliverableFormData = z.infer<typeof deliverableSchema>;
 
+export const invoiceSchema = z.object({
+  invoiceNumber: z
+    .string()
+    .min(3, "Invoice number is required")
+    .max(50, "Invoice number must be less than 50 characters"),
+  amount: z.string().min(1, "Amount is required"),
+  status: z.enum(["DRAFT", "SENT", "PAID", "OVERDUE", "CANCELLED"], {
+    required_error: "Status is required",
+  }),
+  dueDate: z.string().optional(),
+  clientId: z.string().min(1, "Client is required"),
+  projectId: z.string().optional(),
+});
+
+export type InvoiceFormData = z.infer<typeof invoiceSchema>;
+
