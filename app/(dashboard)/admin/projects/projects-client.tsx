@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { ProjectForm } from "@/components/dashboard/project-form";
 import { deleteProject } from "@/app/actions/projects";
 import { useToast } from "@/hooks/use-toast";
@@ -135,6 +136,14 @@ export function ProjectsClient({ projects: initialProjects, clients }: ProjectsC
                     </CardDescription>
                   </div>
                   <div className="flex gap-2">
+                    <Link href={`/admin/projects/${project.id}`}>
+                      <Button
+                        variant="default"
+                        size="sm"
+                      >
+                        View
+                      </Button>
+                    </Link>
                     <Button
                       variant="outline"
                       size="sm"
