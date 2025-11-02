@@ -3,14 +3,16 @@
 import { useState } from "react";
 import Link from "next/link";
 import { MilestoneForm } from "@/components/dashboard/milestone-form";
+import { DeliverableForm } from "@/components/dashboard/deliverable-form";
 import { deleteMilestone, toggleMilestoneComplete } from "@/app/actions/milestones";
+import { deleteDeliverable } from "@/app/actions/deliverables";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { formatDate } from "@/lib/utils";
-import { ArrowLeft, CheckCircle2, Circle, Edit, Trash2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Circle, Edit, Trash2, ExternalLink } from "lucide-react";
 import type { Prisma } from "@prisma/client";
 
 type Milestone = {
@@ -77,6 +79,8 @@ const STATUS_LABELS: Record<string, string> = {
 export function ProjectDetailClient({ project: initialProject }: ProjectDetailClientProps) {
   const [isMilestoneFormOpen, setIsMilestoneFormOpen] = useState(false);
   const [editingMilestone, setEditingMilestone] = useState<Milestone | null>(null);
+  const [isDeliverableFormOpen, setIsDeliverableFormOpen] = useState(false);
+  const [editingDeliverable, setEditingDeliverable] = useState<Deliverable | null>(null);
   const { toast } = useToast();
 
   const completedMilestones = initialProject.milestones.filter(m => m.completedAt).length;
@@ -131,6 +135,37 @@ export function ProjectDetailClient({ project: initialProject }: ProjectDetailCl
   function handleCloseMilestoneForm() {
     setIsMilestoneFormOpen(false);
     setEditingMilestone(null);
+  }
+
+  async function handleDeleteDeliverable(id: string, title: string) {
+    if (!confirm(`Are you sure you want to delete "${title}"?`)) {
+      return;
+    }
+
+    const result = await deleteDeliverable(id, initialProject.id);
+
+    if (result.success) {
+      toast({
+        title: "Deliverable deleted",
+        description: `Successfully deleted ${title}`,
+      });
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: result.error || "Failed to delete deliverable",
+      });
+    }
+  }
+
+  function handleEditDeliverable(deliverable: Deliverable) {
+    setEditingDeliverable(deliverable);
+    setIsDeliverableFormOpen(true);
+  }
+
+  function handleCloseDeliverableForm() {
+    setIsDeliverableFormOpen(false);
+    setEditingDeliverable(null);
   }
 
   return (
@@ -309,7 +344,7 @@ export function ProjectDetailClient({ project: initialProject }: ProjectDetailCl
               <CardTitle>Deliverables</CardTitle>
               <CardDescription>Files and assets delivered to the client</CardDescription>
             </div>
-            <Button variant="outline">
+            <Button onClick={() => setIsDeliverableFormOpen(true)}>
               + Add Deliverable
             </Button>
           </div>
@@ -321,31 +356,55 @@ export function ProjectDetailClient({ project: initialProject }: ProjectDetailCl
               <p className="text-muted-foreground mb-4">
                 No deliverables yet. Add files and assets as you complete work.
               </p>
-              <Button variant="outline">
+              <Button onClick={() => setIsDeliverableFormOpen(true)}>
                 Add First Deliverable
               </Button>
             </div>
           ) : (
             <div className="space-y-3">
               {initialProject.deliverables.map((deliverable) => (
-                <div key={deliverable.id} className="flex items-start gap-3 p-4 rounded-lg border">
-                  <div className="flex-1">
-                    <h4 className="font-semibold">{deliverable.title}</h4>
-                    {deliverable.description && (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {deliverable.description}
-                      </p>
-                    )}
-                    {deliverable.fileUrl && (
-                      <a 
-                        href={deliverable.fileUrl} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-xs text-blue-500 hover:underline mt-2 inline-block"
-                      >
-                        View File →
-                      </a>
-                    )}
+                <div key={deliverable.id} className="flex items-start gap-3 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h4 className="font-semibold">{deliverable.title}</h4>
+                        {deliverable.description && (
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {deliverable.description}
+                          </p>
+                        )}
+                        {deliverable.fileUrl && (
+                          <a 
+                            href={deliverable.fileUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-xs text-blue-500 hover:underline mt-2 inline-flex items-center gap-1"
+                          >
+                            View File <ExternalLink className="h-3 w-3" />
+                          </a>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Added {formatDate(deliverable.createdAt)}
+                        </p>
+                      </div>
+                      
+                      <div className="flex gap-2 flex-shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditDeliverable(deliverable)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteDeliverable(deliverable.id, deliverable.title)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -361,6 +420,14 @@ export function ProjectDetailClient({ project: initialProject }: ProjectDetailCl
         projectId={initialProject.id}
         milestone={editingMilestone || undefined}
         nextOrder={initialProject.milestones.length}
+      />
+
+      {/* Deliverable Form Dialog */}
+      <DeliverableForm
+        open={isDeliverableFormOpen}
+        onOpenChange={handleCloseDeliverableForm}
+        projectId={initialProject.id}
+        deliverable={editingDeliverable || undefined}
       />
     </>
   );
