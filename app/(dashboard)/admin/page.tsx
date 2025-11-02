@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { getProjects } from "@/app/actions/projects";
+import { getUsers } from "@/app/actions/users";
 
 export const metadata = {
   title: "Admin Dashboard - Lollyshoppe",
@@ -16,8 +18,17 @@ export default async function AdminDashboard() {
     redirect("/sign-in");
   }
 
-  // TODO: Check if user is admin
-  // For now, allow all authenticated users to see this page
+  // Fetch dashboard data
+  const [projectsResult, usersResult] = await Promise.all([
+    getProjects(),
+    getUsers(),
+  ]);
+
+  const projects = projectsResult.success && projectsResult.data ? projectsResult.data : [];
+  const users = usersResult.success && usersResult.data ? usersResult.data : [];
+  
+  const activeProjects = projects.filter(p => p.status === "IN_PROGRESS").length;
+  const clients = users.filter(u => u.role === "CLIENT").length;
 
   return (
     <div className="container py-8">
@@ -29,9 +40,11 @@ export default async function AdminDashboard() {
             Manage your business, clients, and projects from one place.
           </p>
         </div>
-        <Button>
-          + New Project
-        </Button>
+        <Link href="/admin/projects">
+          <Button>
+            + New Project
+          </Button>
+        </Link>
       </div>
 
       {/* Key Metrics */}
@@ -42,8 +55,10 @@ export default async function AdminDashboard() {
             <span className="text-2xl">👥</span>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">No clients yet</p>
+            <div className="text-2xl font-bold">{clients}</div>
+            <p className="text-xs text-muted-foreground">
+              {clients === 0 ? "No clients yet" : `${clients} total client${clients === 1 ? "" : "s"}`}
+            </p>
           </CardContent>
         </Card>
 
@@ -53,8 +68,10 @@ export default async function AdminDashboard() {
             <span className="text-2xl">🚀</span>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">No active projects</p>
+            <div className="text-2xl font-bold">{activeProjects}</div>
+            <p className="text-xs text-muted-foreground">
+              {activeProjects === 0 ? "No active projects" : `${activeProjects} in progress`}
+            </p>
           </CardContent>
         </Card>
 
@@ -88,15 +105,17 @@ export default async function AdminDashboard() {
           <CardDescription>Common tasks and shortcuts</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Button variant="outline" className="h-auto py-6 flex-col gap-2">
+          <Button variant="outline" className="h-auto py-6 flex-col gap-2" disabled>
             <span className="text-3xl">➕</span>
             <span className="font-semibold">New Client</span>
           </Button>
 
-          <Button variant="outline" className="h-auto py-6 flex-col gap-2">
-            <span className="text-3xl">📊</span>
-            <span className="font-semibold">New Project</span>
-          </Button>
+          <Link href="/admin/projects" className="w-full">
+            <Button variant="outline" className="h-auto py-6 flex-col gap-2 w-full">
+              <span className="text-3xl">📊</span>
+              <span className="font-semibold">New Project</span>
+            </Button>
+          </Link>
 
           <Button variant="outline" className="h-auto py-6 flex-col gap-2">
             <span className="text-3xl">🧾</span>
